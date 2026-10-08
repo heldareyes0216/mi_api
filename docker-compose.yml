@@ -1,0 +1,25 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - cargaexpress_network
+
+  api:
+    build: .
+    container_name: mi-api-container
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+    networks:
+      - cargaexpress_network
+
+networks:
+  cargaexpress_network:
+    driver: bridge

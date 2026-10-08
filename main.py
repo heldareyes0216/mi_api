@@ -2,6 +2,7 @@ import uvicorn
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlmodel import Session, select
+from rabbitmq import enviar_mensaje
 
 from database import init_db, get_session
 from models import User, UserCreate, UserUpdate, Product, ProductCreate, ProductUpdate
@@ -21,13 +22,23 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
 
-@app.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
-def create_user(user_data: UserCreate, session: Session = Depends(get_session)):
-    db_user = User.model_validate(user_data)
-    session.add(db_user)
+@app.post("/products", response_model=Product, status_code=status.HTTP_201_CREATED)
+def create_product(product_data: ProductCreate, session: Session = Depends(get_session)):
+    db_product = Product.model_validate(product_data)
+
+    session.add(db_product)
     session.commit()
-    session.refresh(db_user)
-    return db_user
+    session.refresh(db_product)
+
+    enviar_mensaje({
+        "product_id": db_product.id,
+        "name": db_product.name,
+        "price": db_product.price,
+        "quantity": db_product.quantity,
+        "category": db_product.category
+    })
+
+    return db_product
 
 @app.put("/users/{user_id}", response_model=User)
 def update_user(user_id: int, user_data: UserUpdate, session: Session = Depends(get_session)):
